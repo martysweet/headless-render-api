@@ -1,0 +1,41 @@
+### JS Rendered Page
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+  "url": "https://www.google.com"
+}
+
+### Accept gzip
+POST http://localhost:3000/content
+Content-Type: application/json
+Accept: gzip
+
+{
+  "url": "https://www.martysweet.co.uk"
+}
+
+### metrics
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+  "url": "http://localhost:3000/metrics"
+}
+
+### Invalid host
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+  "url": "http://invalidhost.local"
+}
+
+
+### 404 Page
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+"url": "https://www.google.com/4044040404"
+}
