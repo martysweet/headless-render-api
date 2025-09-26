@@ -16,6 +16,8 @@ Inspired by fuller headless services (with strict licencing) such as:
 - Dockerized for easy deployment.
 - Helm chart for Kubernetes deployment with HPA support.
 
+![arch.svg](docs/arch.svg)
+
 ### Future features
 If you find this useful, please raise an issue or PR with any features you would like to see!
 Examples include:

@@ -62,9 +62,9 @@ jobs:
 
           # Update chart version
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            VERSION="${{ steps.vars.outputs.version_tag }}"
+            VERSION="${{ steps.vars.outputs.version_tag }}-helm"
           else
-            VERSION="0.1.0-${{ steps.vars.outputs.sha_tag }}"
+            VERSION="0.0.0-${{ steps.vars.outputs.sha_tag }}-helm"
           fi
           sed -i "s/version: .*/version: ${VERSION}/" helm/Chart.yaml
 
