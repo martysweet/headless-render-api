@@ -1,12 +1,32 @@
 # headless-render-api
 Headless browser service for rendering dynamic web content. Playwright and Express, deployable with Helm.
 
+This service uses Playwright to render web pages, making it suitable for scraping dynamic content that relies on JavaScript. 
+It is built with Express.js and can be deployed using Helm charts.
+
+Playwright launches Chromium in headless mode to fetch and render web pages.
+
+## Endpoints
+### `POST /content`
+- Request Body: `{ "url": "https://example.com" }`
+- Response: `{ "statusCode": 200, "content": "<!doctype html>...</html>" }`
+
+### `GET /health`
+
+### `GET /metrics`
+
+
+## Resource Requirements
 Memory Requirements - TODO
 
 Concurrency - Memory and CPU dependent on the host machine, but should be possible to get 10-20 concurrent requests per pod.
 
 ## Usage
+Launch the docker locally with `docker compose build` and `docker compose up --watch`.
 
+Use the test files in the `http` directory to test the endpoints as needed.
+
+An example using curl:
 ```bash
 curl -X POST http://localhost:3000/content -H "Content-Type: application/json" -d '{"url": "https://example.com"}'
 
@@ -16,7 +36,16 @@ curl -X POST http://localhost:3000/content -H "Content-Type: application/json" -
 }
 ```
 
-TODO: Helm deployment
+## Deploying with Helm
+The application can be deployed using the included minimal helm chart, or by using the Docker image in your own helm charts.
+The provided helm chart provides a simple stateless service with basic resource requests and limits.
+
+The HPA is configured to scale between 1 and 3 replicas based on CPU usage, with a target average CPU utilization of 60%.
+
+```
+helm lint ./helm
+helm install headless-render-api ./helm
+```
 
 ## Testing Concurrency
 You can use Apache Benchmark (ab) to test the concurrency of the headless-render-api. 

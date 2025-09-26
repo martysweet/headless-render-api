@@ -1,0 +1,41 @@
+replicaCount: 1
+
+image:
+  pullSecrets: []
+  # - name: myRegistryKeySecret
+  repository: ghcr.io/martysweet/headless-render-api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+nodeSelector: {}
+affinity: {}
+tolerations: {}
+
+service:
+  type: ClusterIP
+  port: 3000
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 60
+
+ingress:
+  enabled: false
+  className: "something"
+  hosts:
+    - host: yourhost
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - yourhost
+
+resources:
+  limits:
+      memory: 256Mi
+  requests:
+      cpu: 500m
+      memory: 256Mi
