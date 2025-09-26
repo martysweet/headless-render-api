@@ -15,6 +15,7 @@ Inspired by fuller headless services (with strict licencing) such as:
 - Simple REST API with endpoints for content rendering, health checks, and metrics.
 - Dockerized for easy deployment.
 - Helm chart for Kubernetes deployment with HPA support.
+- ARM64 and AMD64 support.
 
 ![arch.svg](docs/arch.svg)
 

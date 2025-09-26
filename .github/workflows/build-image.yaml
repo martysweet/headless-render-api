@@ -3,6 +3,8 @@ name: Build and Push Docker Image
 on:
   push:
     branches: ["*"]
+    paths-ignore:
+      - README.md
   release:
     types: [published]
   workflow_dispatch:
@@ -67,6 +69,14 @@ jobs:
             VERSION="0.0.0-${{ steps.vars.outputs.sha_tag }}"
           fi
           sed -i "s/version: .*/version: ${VERSION}/" helm/Chart.yaml
+
+          # Update image tag in values.yaml
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            IMAGE_TAG="${{ steps.vars.outputs.version_tag }}"
+          else
+            IMAGE_TAG="${{ steps.vars.outputs.sha_tag }}"
+          fi
+          sed -i "s/tag: .*/tag: \"${IMAGE_TAG}\"/" helm/values.yaml
 
           # Package the helm chart
           helm package helm/
