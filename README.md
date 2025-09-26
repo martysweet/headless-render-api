@@ -1,10 +1,27 @@
 # headless-render-api
-Headless browser service for rendering dynamic web content. Playwright and Express, deployable with Helm.
+A simple headless browser service for rendering dynamic web content. Playwright and Express, deployable with Helm.
 
 This service uses Playwright to render web pages, making it suitable for scraping dynamic content that relies on JavaScript. 
 It is built with Express.js and can be deployed using Helm charts.
 
 Playwright launches Chromium in headless mode to fetch and render web pages.
+
+Inspired by fuller headless services (with strict licencing) such as:
+- [Browserless](https://www.browserless.io/)
+- [AeroKube Moon](https://aerokube.com/moon/)
+
+## Features
+- Render dynamic web content using a headless Chromium browser.
+- Simple REST API with endpoints for content rendering, health checks, and metrics.
+- Dockerized for easy deployment.
+- Helm chart for Kubernetes deployment with HPA support.
+
+### Future features
+If you find this useful, please raise an issue or PR with any features you would like to see!
+Examples include:
+- Persistent sessions 
+- Exposing [CDP](https://chromedevtools.github.io/devtools-protocol/) sessions to a remote client
+- Proxy support
 
 ## Endpoints
 ### `POST /content`
