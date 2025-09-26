@@ -41,3 +41,18 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.sha_tag }}
             ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.branch_tag }}
             ${{ github.ref_name == 'main' && format('ghcr.io/{0}:latest', github.repository) || '' }}
+
+      - name: Package and push Helm chart
+        run: |
+          # Install helm
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+          # Update chart version to match git commit
+          sed -i "s/version: .*/version: 0.1.0-${{ steps.vars.outputs.sha_tag }}/" helm/Chart.yaml
+
+          # Package the helm chart
+          helm package helm/
+
+          # Push to GHCR OCI registry
+          helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+          helm push headless-render-api-0.1.0-${{ steps.vars.outputs.sha_tag }}.tgz oci://ghcr.io/${{ github.repository_owner }}
