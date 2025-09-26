@@ -3,6 +3,8 @@ name: Build and Push Docker Image
 on:
   push:
     branches: ["*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -31,28 +33,39 @@ jobs:
           BRANCH_TAG=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
           echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
           echo "branch_tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            VERSION_TAG=${GITHUB_REF_NAME}
+            echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.sha_tag }}
             ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.branch_tag }}
             ${{ github.ref_name == 'main' && format('ghcr.io/{0}:latest', github.repository) || '' }}
+            ${{ github.event_name == 'release' && format('ghcr.io/{0}:{1}', github.repository, steps.vars.outputs.version_tag) || '' }}
 
       - name: Package and push Helm chart
         run: |
           # Install helm
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-          # Update chart version to match git commit
-          sed -i "s/version: .*/version: 0.1.0-${{ steps.vars.outputs.sha_tag }}/" helm/Chart.yaml
+          # Update chart version
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            VERSION="${{ steps.vars.outputs.version_tag }}"
+          else
+            VERSION="0.1.0-${{ steps.vars.outputs.sha_tag }}"
+          fi
+          sed -i "s/version: .*/version: ${VERSION}/" helm/Chart.yaml
 
           # Package the helm chart
           helm package helm/
 
           # Push to GHCR OCI registry
           helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-          helm push headless-render-api-0.1.0-${{ steps.vars.outputs.sha_tag }}.tgz oci://ghcr.io/${{ github.repository_owner }}
+          helm push headless-render-api-${VERSION}.tgz oci://ghcr.io/${{ github.repository_owner }}
