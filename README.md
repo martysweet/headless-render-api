@@ -31,6 +31,11 @@ Examples include:
 - Request Body: `{ "url": "https://example.com" }`
 - Response: `{ "statusCode": 200, "content": "<!doctype html>...</html>" }`
 
+Will return the HTML used to render the page after all network requests have completed.
+This will show the fully rendered HTML, including any dynamic content loaded via JavaScript.
+
+> Note: If you request an image directly, it will return the HTML for the browsers image page, not the image itself.
+
 ### `GET /health`
 
 ### `GET /metrics`

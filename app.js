@@ -126,7 +126,7 @@ app.post('/content', async (req, res) => {
         // Return success response
         res.json({
             statusCode: pageResponseCode,
-            raw: htmlContent // Optional: include raw HTML for debugging
+            content: htmlContent
         });
 
     } catch (error) {
