@@ -62,9 +62,9 @@ jobs:
 
           # Update chart version
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            VERSION="${{ steps.vars.outputs.version_tag }}-helm"
+            VERSION="${{ steps.vars.outputs.version_tag }}"
           else
-            VERSION="0.0.0-${{ steps.vars.outputs.sha_tag }}-helm"
+            VERSION="0.0.0-${{ steps.vars.outputs.sha_tag }}"
           fi
           sed -i "s/version: .*/version: ${VERSION}/" helm/Chart.yaml
 
@@ -73,4 +73,4 @@ jobs:
 
           # Push to GHCR OCI registry
           helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-          helm push headless-render-api-${VERSION}.tgz oci://ghcr.io/${{ github.repository_owner }}
+          helm push headless-render-api-${VERSION}.tgz oci://ghcr.io/${{ github.repository_owner }} --name headless-render-api-helm
