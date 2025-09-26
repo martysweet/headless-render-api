@@ -67,6 +67,29 @@ helm lint ./helm
 helm install headless-render-api ./helm
 ```
 
+Or using a Chart dependency:
+```yaml
+apiVersion: v2
+name: my-chart
+description: A Helm chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: headless-render-api-chart
+    alias: headless-render-api
+    version: ^1.0.0
+    repository: oci://ghcr.io/martysweet
+```
+
+```
+headless-render-api:
+  ingress:
+    enabled: true
+    ...
+```
+
 ## Testing Concurrency
 You can use Apache Benchmark (ab) to test the concurrency of the headless-render-api. 
 The following command sends 20,000 requests with a concurrency level of 200 to the `/content` or `/metrics` endpoint, posting JSON data with a URL to be rendered.

@@ -64,7 +64,8 @@ jobs:
 
           # Update chart version
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            VERSION="${{ steps.vars.outputs.version_tag }}"
+            RAW_VERSION="${{ steps.vars.outputs.version_tag }}"
+            VERSION="${RAW_VERSION#v}"
           else
             VERSION="0.0.0-${{ steps.vars.outputs.sha_tag }}"
           fi
