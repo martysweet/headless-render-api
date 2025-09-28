@@ -37,5 +37,15 @@ POST http://localhost:3000/content
 Content-Type: application/json
 
 {
-"url": "https://www.google.com/4044040404"
+  "sessionId": "1759077399915-9pgyq06d3",
+  "url": "https://www.google.com/4044040404"
+}
+
+### Test Persistence
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+  "sessionId": "1f4e1f09-fcd8-4631-8759-0364328bf615",
+  "url": "https://martysweet.github.io/browser-persistence-webcheck/"
 }

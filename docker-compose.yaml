@@ -8,6 +8,8 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
+      - STATE_STORAGE_ENABLED=true
+      - STATE_STORAGE_VALKEY_HOST=valkey
     develop:
       watch:
         - action: rebuild
@@ -19,3 +21,11 @@ services:
         - action: rebuild
           path: ./package-lock.json
           target: /app/package-lock.json
+
+  valkey:
+    image: valkey/valkey:8.1.3-alpine
+    container_name: valkey
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+

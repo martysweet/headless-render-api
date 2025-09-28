@@ -2,6 +2,8 @@ const express = require('express');
 const { chromium } = require('playwright');
 const compression = require('compression');
 const pino = require('pino');
+const { GlideClient, ConnectionTimeoutError } = require('@valkey/valkey-glide');
+const { v4: uuidv4 } = require('uuid');
 
 
 // Initialize logger
@@ -11,6 +13,10 @@ const logger = pino({
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const STATE_STORAGE_ENABLED = process.env.STATE_STORAGE_ENABLED === 'true'; // Enable Valkey storage
+const STATE_STORAGE_VALKEY_HOST = process.env.STATE_STORAGE_VALKEY_HOST || 'valkey';
+const STATE_STORAGE_VALKEY_PORT = process.env.STATE_STORAGE_VALKEY_PORT || 6379;
+const STATE_STORAGE_TTL = process.env.STATE_STORAGE_TTL || 1800; // 30 minutes default
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -29,6 +35,7 @@ app.use((req,res,next) =>{
 
 // Initialize browser instance
 let browser;
+let valkeyClient;
 
 async function initBrowser() {
     try {
@@ -51,9 +58,102 @@ async function initBrowser() {
     }
 }
 
+async function connectToValkey() {
+    if (!STATE_STORAGE_ENABLED) {
+        logger.info('Valkey storage disabled');
+        return null;
+    }
+
+    try {
+        valkeyClient = await GlideClient.createClient({
+            addresses: [{
+                host: STATE_STORAGE_VALKEY_HOST,
+                port: STATE_STORAGE_VALKEY_PORT
+            }]
+        });
+
+        logger.info({ host: STATE_STORAGE_VALKEY_HOST, port: STATE_STORAGE_VALKEY_PORT }, 'Valkey connection established');
+        return valkeyClient;
+    } catch (error) {
+        if (error instanceof ConnectionTimeoutError) {
+            logger.error({ error: error.message }, 'Valkey connection timeout');
+        } else {
+            logger.error({ error: error.message, stack: error.stack }, 'Failed to connect to Valkey');
+        }
+        return null;
+    }
+}
+
+// Storing session state to Valkey
+async function storeSessionState(sessionId, context) {
+    if (!STATE_STORAGE_ENABLED || !valkeyClient) {
+        logger.debug('Storage state disabled or Valkey client not available');
+        return false;
+    }
+
+    try {
+        const storage = await context.storageState();
+        // Store as JSON string with TTL
+        const key = `session:${sessionId}`;
+        await valkeyClient.set(key, JSON.stringify(storage), { expiry: { type: 'EX', count: STATE_STORAGE_TTL } });
+
+        logger.info({ sessionId, ttl: STATE_STORAGE_TTL }, 'Session state stored successfully');
+        return true;
+    } catch (error) {
+        logger.error({ error: error.message, stack: error.stack, sessionId }, 'Failed to store session state');
+        return false;
+    }
+}
+
+// Retrieving session state from Valkey, this should be fed into the Session initialisation
+async function getSessionState(sessionId) {
+    if (!STATE_STORAGE_ENABLED || !valkeyClient) {
+        logger.debug('Storage state disabled or Valkey client not available');
+        return null;
+    }
+
+    try {
+        const key = `session:${sessionId}`;
+        const storedState = await valkeyClient.get(key);
+
+        if (!storedState) {
+            logger.debug({ sessionId }, 'No session state found for sessionId');
+            return null;
+        }
+
+        const storageState = JSON.parse(storedState);
+        logger.info({ sessionId }, 'Session state retrieved successfully');
+        return storageState;
+    } catch (error) {
+        logger.error({ error: error.message, stack: error.stack, sessionId }, 'Failed to load session state');
+        return null;
+    }
+}
+
+// Generate cryptographically secure session ID
+function generateSessionId() {
+    return uuidv4();
+}
+
+// Check if session exists in Valkey
+async function sessionExists(sessionId) {
+    if (!STATE_STORAGE_ENABLED || !valkeyClient) {
+        return false;
+    }
+
+    try {
+        const key = `session:${sessionId}`;
+        const exists = await valkeyClient.exists([key]);
+        return exists === 1;
+    } catch (error) {
+        logger.error({ error: error.message, sessionId }, 'Failed to check session existence');
+        return false;
+    }
+}
+
 // POST endpoint to fetch content
 app.post('/content', async (req, res) => {
-    const { url } = req.body;
+    const { url, sessionId } = req.body;
 
     // Validate input
     if (!url) {
@@ -61,6 +161,23 @@ app.post('/content', async (req, res) => {
             statusCode: 400,
             error: 'URL is required'
         });
+    }
+
+    // Validate user-provided or generate new UUID
+    let currentSessionId;
+    if (sessionId) {
+        // Check if user-provided session exists
+        const exists = await sessionExists(sessionId);
+        if (exists) {
+            currentSessionId = sessionId;
+            logger.info({ sessionId }, 'Using existing user-provided session');
+        } else {
+            currentSessionId = generateSessionId();
+            logger.info({ providedSessionId: sessionId, newSessionId: currentSessionId }, 'User-provided session not found, generated new UUID');
+        }
+    } else {
+        currentSessionId = generateSessionId();
+        logger.info({ sessionId: currentSessionId }, 'Generated new session ID');
     }
 
     // Validate URL format
@@ -75,16 +192,33 @@ app.post('/content', async (req, res) => {
 
     let context;
     let page;
-    logger.info({ url }, 'Fetching content for URL');
+    let existingStorageState = null;
+
+    logger.info({ url, sessionId: currentSessionId }, 'Fetching content for URL');
+
+    // Try to retrieve existing session state if session exists
+    if (sessionId && currentSessionId === sessionId) {
+        existingStorageState = await getSessionState(sessionId);
+        if (existingStorageState) {
+            logger.info({ sessionId }, 'Using existing session state');
+        }
+    }
 
     try {
         // Create a new browser context (isolated session)
-        context = await browser.newContext({
+        const contextOptions = {
             viewport: { width: 1920, height: 1080 },
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             ignoreHTTPSErrors: true, // Optional: ignore SSL errors
             javaScriptEnabled: true
-        });
+        };
+
+        // Add storage state if available
+        if (existingStorageState) {
+            contextOptions.storageState = existingStorageState;
+        }
+
+        context = await browser.newContext(contextOptions);
 
         // Create a new page
         page = await context.newPage();
@@ -123,10 +257,15 @@ app.post('/content', async (req, res) => {
             contentLength: htmlContent.length
         }, 'Successfully fetched URL content');
 
+        // Store session state for future use
+        const stateStored = await storeSessionState(currentSessionId, context);
+
         // Return success response
         res.json({
             statusCode: pageResponseCode,
-            content: htmlContent
+            content: htmlContent,
+            sessionId: currentSessionId,
+            stateStored: stateStored
         });
 
     } catch (error) {
@@ -171,10 +310,15 @@ app.post('/content', async (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
     const isConnected = browser && browser.isConnected();
+    const valkeyConnected = valkeyClient !== null && valkeyClient !== undefined;
 
-    res.status(isConnected ? 200 : 503).json({
-        status: isConnected ? 'healthy' : 'unhealthy',
+    const isHealthy = isConnected && (!STATE_STORAGE_ENABLED || valkeyConnected);
+
+    res.status(isHealthy ? 200 : 503).json({
+        status: isHealthy ? 'healthy' : 'unhealthy',
         browserConnected: isConnected,
+        valkeyConnected: valkeyConnected,
+        valkeyEnabled: STATE_STORAGE_ENABLED,
         uptime: process.uptime()
     });
 });
@@ -205,6 +349,12 @@ const gracefulShutdown = async (signal) => {
         );
     }
 
+    if (valkeyClient) {
+        await valkeyClient.close().catch(err =>
+            logger.error({ error: err.message }, 'Error closing Valkey client')
+        );
+    }
+
     process.exit(0);
 };
 
@@ -224,6 +374,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Start server
 async function start() {
     await initBrowser();
+    await connectToValkey();
 
     app.listen(PORT, () => {
         logger.info({ port: PORT }, 'Server started successfully');
