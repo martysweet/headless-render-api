@@ -36,6 +36,9 @@ spec:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10
+          env:
+            - name: STATE_STORAGE_VALKEY_HOST
+              value: "{{ include "application.fullname" . }}-valkey"
           readinessProbe:
             httpGet:
               path: /health

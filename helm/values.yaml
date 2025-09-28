@@ -7,6 +7,19 @@ image:
   pullPolicy: IfNotPresent
   tag: "latest"
 
+valkey:
+  enabled: true
+  image:
+    repository: valkey/valkey
+    pullPolicy: IfNotPresent
+    tag: "8.1.3-alpine"
+  resources:
+    limits:
+      memory: "256Mi"
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+
 nodeSelector: {}
 affinity: {}
 tolerations: {}

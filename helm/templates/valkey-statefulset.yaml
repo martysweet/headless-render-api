@@ -1,0 +1,30 @@
+{{ if .Values.valkey.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "application.fullname" . }}-valkey
+  labels:
+    {{- include "application.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  serviceName: {{ include "application.fullname" . }}-valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "application.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: valkey
+  template:
+    metadata:
+      labels:
+        {{- include "application.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: valkey
+    spec:
+      containers:
+      - name: valkey
+        image: {{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}
+        ports:
+        - containerPort: 6379
+          name: valkey
+        resources:
+          {{ toYaml .Values.valkey.resources | nindent 10 }}
+{{- end }}
