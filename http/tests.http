@@ -49,3 +49,32 @@ Content-Type: application/json
   "sessionId": "1f4e1f09-fcd8-4631-8759-0364328bf615",
   "url": "https://martysweet.github.io/browser-persistence-webcheck/"
 }
+
+### Bot Test to HTML file
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+  "url": "https://bot.sannysoft.com/",
+  "output": "html"
+}
+
+### Browser Info to HTML file TODO - this network idle times out
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+  "url": "https://deviceandbrowserinfo.com/info_device",
+  "output": "html"
+}
+
+### Another bot test
+POST http://localhost:3000/content
+Content-Type: application/json
+
+{
+"url": "https://bot.incolumitas.com/",
+"output": "html"
+}
+
+

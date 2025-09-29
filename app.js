@@ -153,7 +153,12 @@ async function sessionExists(sessionId) {
 
 // POST endpoint to fetch content
 app.post('/content', async (req, res) => {
-    const { url, sessionId } = req.body;
+    const { url, sessionId, output } = req.body;
+
+    let html = false;
+    if(output && output.toLowerCase() === 'html') {
+        html = true;
+    }
 
     // Validate input
     if (!url) {
@@ -259,6 +264,13 @@ app.post('/content', async (req, res) => {
 
         // Store session state for future use
         const stateStored = await storeSessionState(currentSessionId, context);
+
+        // If html param is true, return raw HTML
+        if (html) {
+            res.set('Content-Type', 'text/html');
+            res.send(htmlContent);
+            return;
+        }
 
         // Return success response
         res.json({
